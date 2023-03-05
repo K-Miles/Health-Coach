@@ -205,7 +205,7 @@ def waterTargetToday():
     uid = request.get_json()['uid']
 
     data = db.collection('Accounts').document(uid).get().to_dict()
-    weight = int(data['weight'])
+    weight = float(data['weight'])
     water_log = data['waterLog']
 
     reccommended_amount = weight / 2 # half an ounce of water for every pound u weight
