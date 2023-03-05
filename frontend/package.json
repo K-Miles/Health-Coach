@@ -9,6 +9,7 @@
   },
   "devDependencies": {
     "@nuxtjs/tailwindcss": "^6.4.1",
+    "firebase": "^9.17.2",
     "nuxt": "^3.2.3",
     "nuxt-vuefire": "^0.1.6",
     "vuefire": "^3.1.0"
