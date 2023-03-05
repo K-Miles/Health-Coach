@@ -1,6 +1,8 @@
 <template>
-  <Navbar />
-  <NuxtPage />
+  <div class="font-serif bg-lime-900 min-h-screen">
+    <Navbar />
+    <NuxtPage />
+  </div>
 </template>
 
 <script setup>

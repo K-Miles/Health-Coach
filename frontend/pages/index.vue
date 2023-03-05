@@ -1,20 +1,22 @@
 <script setup>
+import quotes from "@/public/quotes.json" // https://gist.github.com/Sacristan/3cdc5db13184df250349467e7a568e28
 const user = await getCurrentUser()
+const quote = quotes.quotes[Math.floor(Math.random()*quotes.quotes.length)] // https://stackoverflow.com/questions/5915096/get-a-random-item-from-a-javascript-array
 </script>
 
 <template>
-  <div class="container mt-10 p-4 bg-gray-200 rounded-md">
-    <h1 class="h1">Hi {{ user.displayName ?? 'there' }},</h1>
-    <p class="p">What would you like to do today?</p>
+  <div class="container mt-10 p-4 bg-gray-100 rounded-md">
+    <h1 class="h1">Welcome back {{ user.displayName ?? 'there' }},</h1>
+    <p class="p font-sans italic">✨ {{ quote }}</p>
     <div class="mt-4 grid grid-cols-2">
-      <a href="/workout" class="bg-white rounded-md border-2 border-gray-100 text-center p-8 mr-2">
-        <i class="text-blue-500 text-6xl fa-solid fa-dumbbell"></i>
+      <NuxtLink to="/workout" class="bg-white rounded-md border-2 border-slate-300 text-center p-8 mr-2">
+        <i class="text-lime-600 text-6xl fa-solid fa-dumbbell"></i>
         <h2 class="mt-4 h2">Work Out</h2>
-      </a>
-      <a href="/nutrition" class="bg-white rounded-md border-2 border-gray-100 text-center p-8">
-        <i class="text-blue-500 text-6xl fa-solid fa-apple-whole"></i>
+      </NuxtLink>
+      <NuxtLink to="/nutrition" class="bg-white rounded-md border-2 border-slate-300 text-center p-8">
+        <i class="text-lime-600 text-6xl fa-solid fa-apple-whole"></i>
         <h2 class="mt-4 h2">Track Nutrition</h2>
-      </a>
+      </NuxtLink>
     </div>
   </div>
 </template>

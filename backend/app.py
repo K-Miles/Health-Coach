@@ -4,7 +4,7 @@ from firebase_admin import credentials, auth, firestore
 from flask_cors import CORS, cross_origin
 from ast import literal_eval
 import urllib.request
-import re
+import re, datetime
 import openai
 
 cred = credentials.Certificate("secrets/serviceAccount.json")
@@ -125,7 +125,7 @@ def nutrition():
     food = request.get_json()['food']
     uid = request.get_json()['uid']
 
-    prompt = f"Tell me the macros for {food}. Respond only in one JSON response, with the response being an object of all the macros. The six main nutrients are calories, protein, carbs, fats, sodium, and sugar. Make sure there are units. The json should be formatted with the macro: value. The units for calories should be Cal. Return the food as well."
+    prompt = f"Tell me the macros for {food}. Respond only in one JSON response, with the response being an object of all the macros. The six main nutrients are calories , protein, carbs, fats, sodium, and sugar. Make sure there are units. The json should be formatted with the macro: value. The units for calories should be Cal. Return the food as well, keep all JSON keys lowercased and exactly how I specified them."
     response = openai.Completion.create(
         model="text-davinci-003",
         prompt=prompt,
@@ -134,7 +134,12 @@ def nutrition():
     )
 
     db.collection("Accounts").document(uid).update({
-        "nutritionLog": firestore.ArrayUnion([response["choices"][0]["text"]])
+        "nutritionLog": firestore.ArrayUnion([
+            {
+                "foodData": response["choices"][0]["text"],
+                "time": datetime.datetime.now().isoformat()
+            }
+        ])
     })
 
     return jsonify({'data': response["choices"][0]["text"]}), 200
@@ -155,8 +160,8 @@ def targets():
     # age, height, weight, activeness
     data = db.collection('Accounts').document(uid).get().to_dict()
     age = float(data['age'])
-    height = float(data['height']) * 2.54
-    weight = float(data['weight']) / 2.25
+    height = float(data['height']) * 2.54 # height in cm
+    weight = float(data['weight']) / 2.25 # height in kg
     goal = data['goal']
     gender = data['gender']
 
