@@ -22,4 +22,5 @@ To setup the backend server, go [here](/backend/README.md)
 #### Other
 - StackOverflow
 - Bootstrap Docs
+- TailwindCSS Docs
 - Other sites when attributed in comments
