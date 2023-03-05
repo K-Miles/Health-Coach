@@ -1,5 +1,7 @@
 <script setup>
 const loadingNewFood = ref(false)
+const waterOrFood = ref("")
+const water = ref()
 const user = await getCurrentUser()
 const food = ref("")
 console.log(user.uid)
@@ -13,25 +15,55 @@ const resp = await useFetch('http://localhost:5001/account_info', {
    })
 })
 
-const userData = ref(resp.data.value.data)
+const areDatesOnSameDay = (a, b) => // https://logfetch.com/js-check-if-dates-are-on-same-day/
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate();
+
+const userData = ref(resp.data.value)
+
+for (const entry of userData.value.nutritionLog) {
+  if (areDatesOnSameDay(new Date(entry.time), new Date())) {
+    userData.value.target.food -= Number((JSON.parse(entry.foodData).calories).match(/(\d+)/)[0]); // regex: https://www.geeksforgeeks.org/extract-a-number-from-a-string-using-javascript/
+    userData.value.target.protein -= Number((JSON.parse(entry.foodData).fats).match(/(\d+)/)[0]); // regex: https://www.geeksforgeeks.org/extract-a-number-from-a-string-using-javascript/
+  }
+}
 
 async function addFood() {
-  loadingNewFood.value = true
-  const resp = await useFetch('http://localhost:5001/nutrition', {
-    method: "POST",
-    headers: {
-        'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-        uid: user.uid,
-        food: food.value
+  if (waterOrFood.value == 'water') {
+    const resp = await useFetch('http://localhost:5001/waterLog', {
+      method: "POST",
+      headers: {
+          'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+          uid: user.uid,
+          water: water.value
+      })
     })
-  })
-  loadingNewFood.value = false
-  userData.value.nutritionLog.push({
-    foodData: resp.data.value.data,
-    time: new Date().toISOString()
-  })
+    console.log(userData.value.target)
+    userData.value.target.water -= water.value
+  } else if (waterOrFood.value == 'food') {
+    loadingNewFood.value = true
+    const resp = await useFetch('http://localhost:5001/nutrition', {
+      method: "POST",
+      headers: {
+          'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+          uid: user.uid,
+          food: food.value
+      })
+    })
+    loadingNewFood.value = false
+    userData.value.nutritionLog.push({
+      foodData: resp.data.value.data,
+      time: new Date().toISOString()
+    })
+  }
+  water.value = ref()
+  food.value = ref("")
+  waterOrFood.value = ref("")
 }
 </script>
 
@@ -47,6 +79,21 @@ async function addFood() {
       </div>
    </div>
 
+   <div class="grid grid-cols-3 mt-3" >
+      <div class="text-center">
+        <h3 class="h3 mb-0">{{ userData.target.food }}</h3>
+        <p class="font-xs mt-0 font-sans">calories remaining today</p>
+      </div>
+      <div class="text-center">
+        <h3 class="h3 mb-0">{{ userData.target.protein }}</h3>
+        <p class="font-xs mt-0 font-sans">grams of protein needed today</p>
+      </div>
+      <div class="text-center">
+        <h3 class="h3 mb-0">{{ userData.target.water }}</h3>
+        <p class="font-xs mt-0 font-sans">quarts of water needed today</p>
+      </div>
+   </div>
+
     <div class="modal fade" id="addFood" tabindex="-1" aria-labelledby="addFood" aria-hidden="true">
       <div class="modal-dialog">
         <div class="modal-content">
@@ -55,8 +102,31 @@ async function addFood() {
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body font-sans">
-            <input v-model="food" type="text" class="form-control font-sans" placeholder="Enter food in natural language..."/>
-            <p class="text-xs ml-1 mt-1 text-gray-500">We use AI to calculate a rough estimate of nutritional data. This will take ~10 seconds.</p>
+            <div class="mb-3">
+              <div class="col-auto">
+                <label for="inputGender" class="col-form-label">Did your drink water or food? </label>
+              </div>
+              <div class="ml-4 form-check">
+                <input class="form-check-input" type="radio" value="food" v-model="waterOrFood">
+                <label class="form-check-label" for="flexRadioDefault1">
+                  Food
+                </label>
+              </div>
+              <div class="ml-4 form-check">
+                <input class="form-check-input" type="radio" value="water" v-model="waterOrFood">
+                <label class="form-check-label" for="flexRadioDefault2">
+                  Water
+                </label>
+              </div>
+            </div>
+            <div v-if="waterOrFood == 'food'">
+              <input v-model="food" type="text" class="form-control font-sans" placeholder="Enter food in natural language..."/>
+              <p class="text-xs ml-1 mt-1 text-gray-500">We use AI to calculate a rough estimate of nutritional data. This will take ~10 seconds.</p>
+            </div>
+            <div v-if="waterOrFood == 'water'">
+              <input v-model="water" type="number" class="form-control font-sans" placeholder="Enter number of ounces of water..."/>
+              <p class="text-xs ml-1 mt-1 text-gray-500">This will be subtracted straight off of your daily goal. Your goal resets daily.</p>
+            </div>
           </div>
           <div class="modal-footer font-sans">
             <button type="button" class="btn btn-secondary bg-gray-500" data-bs-dismiss="modal">Close</button>
@@ -65,7 +135,8 @@ async function addFood() {
         </div>
       </div>
     </div>
-    <div class="mt-4 grid grid-cols-1 xl:grid-cols-3">
+    <h3 class="mt-3 h3">Meals:</h3>
+    <div class="mt-1 grid grid-cols-1 xl:grid-cols-3">
       <div v-for="meal of userData.nutritionLog" class="bg-white rounded-md border-2 border-gray-200 p-4 mb-2 xl:mr-2">
         <h5 class="h5">{{ JSON.parse(meal.foodData).food}} &bull; {{ new Date(meal.time).toLocaleDateString() }}</h5>
         <div class="font-sans font-sm text-gray-500">

@@ -70,6 +70,7 @@ def register():
           "days": days,
           "workoutPlans": workoutPlan,
           "nutritionLog": [],
+          "waterLog": [],
           "gender": gender,
           "age": age
         })
@@ -96,8 +97,19 @@ def workout_plan():
 @cross_origin()
 def account_info():
     uid = request.get_json()['uid']
-    resp = jsonify({'data': db.collection('Accounts').document(uid).get().to_dict()}), 200
-    return resp
+    resp = db.collection('Accounts').document(uid).get().to_dict()
+    target = dict(targets(uid))
+    resp['target'] = target
+    return jsonify(resp), 200
+
+
+@app.route('/account_save', methods=['POST'])
+@cross_origin()
+def account_save():
+    uid = request.get_json()['uid']
+    data = request.get_json()['data']
+    resp = db.collection('Accounts').document(uid).set(data)
+    return jsonify({ 'ok': 'yes'}), 200
 
 @app.route('/regenerate', methods=['POST'])
 @cross_origin()
@@ -159,9 +171,7 @@ def videoSearch():
 
     return jsonify({'data': firstVideo}), 200
 
-@app.route('/targets', methods=['POST'])
-def targets():
-    uid = request.get_json()['uid']
+def targets(uid):
     # age, height, weight, activeness
     data = db.collection('Accounts').document(uid).get().to_dict()
     age = float(data['age'])
@@ -169,6 +179,7 @@ def targets():
     weight = float(data['weight']) / 2.25 # height in kg
     goal = data['goal']
     gender = data['gender']
+    protein = float(data['weight'])
 
     if gender == "m":
         calories = 13.397 * weight + 4.799 * height - 5.677 * age + 88.362 # MBR Formula
@@ -179,7 +190,25 @@ def targets():
     elif goal == "gain":
         calories = calories + 250
 
-    return jsonify({'data': int(calories)}), 200
+    data = db.collection('Accounts').document(uid).get().to_dict()
+    weight = float(data['weight'])
+    water_log = data['waterLog']
+
+    reccommended_amount = weight / 2 # half an ounce of water for every pound u weight
+    
+    water_today = 0
+    for log in water_log:
+        if log['date'] == datetime.datetime.now().strftime("%Y-%m-%d"):
+            water_today += float(log['waterData'])
+
+    if water_today < reccommended_amount:
+        return {
+            'food': int(calories), 
+            'water': int(reccommended_amount - water_today),
+            'protein': int(protein)
+        }
+    elif water_today >= reccommended_amount:
+        return { 'food': int(calories), 'water': 0, 'protein': int(protein) }
 
 @app.route('/waterLog', methods=['POST'])
 def water_log():
@@ -197,28 +226,6 @@ def water_log():
     })
 
     return jsonify(data), 200
-
-@app.route('/waterTargetToday', methods=['POST'])
-def waterTargetToday():
-    uid = request.get_json()['uid']
-
-    data = db.collection('Accounts').document(uid).get().to_dict()
-    weight = float(data['weight'])
-    water_log = data['waterLog']
-
-    reccommended_amount = weight / 2 # half an ounce of water for every pound u weight
-    
-    water_today = 0
-    for log in water_log:
-        if log['date'] == datetime.datetime.now().strftime("%Y-%m-%d"):
-            water_today += float(log['waterData'])
-
-    if water_today < reccommended_amount:
-        return jsonify({'data': int(reccommended_amount - water_today)}), 200
-        # return jsonify({'message': f'You need {reccommended_amount - water_today} ounces of water today.'}), 200
-    elif water_today >= reccommended_amount:
-        return jsonify({'data': 0}), 200
-        # return jsonify({'message': f'You need {water_today - reccommended_amount} more ounces of water today.'}), 200
 
 if __name__ == '__main__':
     app.run(debug=True, port=5001)

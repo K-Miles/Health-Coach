@@ -39,8 +39,8 @@ import { signInWithEmailAndPassword } from '@firebase/auth';
             </div>
           </div>
           
-          <button type="submit" class="btn btn-primary bg-blue-500 mr-1">Login</button>
-          <a href="/register" class="btn btn-primary bg-blue-500">Register</a>
+          <button type="submit" class="btn btn-success bg-lime-700 mr-1">Login</button>
+          <a href="/register" class="btn btn-secondary bg-gray-500">Register</a>
         </form>
       </div>
   </div>
