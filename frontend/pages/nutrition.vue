@@ -25,8 +25,18 @@ const userData = ref(resp.data.value)
 for (const entry of userData.value.nutritionLog) {
   if (areDatesOnSameDay(new Date(entry.time), new Date())) {
     userData.value.target.food -= Number((JSON.parse(entry.foodData).calories).match(/(\d+)/)[0]); // regex: https://www.geeksforgeeks.org/extract-a-number-from-a-string-using-javascript/
-    userData.value.target.protein -= Number((JSON.parse(entry.foodData).fats).match(/(\d+)/)[0]); // regex: https://www.geeksforgeeks.org/extract-a-number-from-a-string-using-javascript/
+    userData.value.target.protein -= Number((JSON.parse(entry.foodData).protein).match(/(\d+)/)[0]); // regex: https://www.geeksforgeeks.org/extract-a-number-from-a-string-using-javascript/
   }
+}
+
+if (userData.value.target.food < 0) {
+  userData.value.target.food = 0
+}
+if (userData.value.target.protein < 0) {
+  userData.value.target.protein = 0
+}
+if (userData.value.target.water < 0) {
+  userData.value.target.water = 0
 }
 
 async function addFood() {
@@ -61,9 +71,9 @@ async function addFood() {
       time: new Date().toISOString()
     })
   }
-  water.value = ref()
-  food.value = ref("")
-  waterOrFood.value = ref("")
+  water = ref()
+  food.value = ""
+  waterOrFood.value = ""
 }
 </script>
 
@@ -90,7 +100,7 @@ async function addFood() {
       </div>
       <div class="text-center">
         <h3 class="h3 mb-0">{{ userData.target.water }}</h3>
-        <p class="font-xs mt-0 font-sans">quarts of water needed today</p>
+        <p class="font-xs mt-0 font-sans">ounces of water needed today</p>
       </div>
    </div>
 
@@ -104,7 +114,7 @@ async function addFood() {
           <div class="modal-body font-sans">
             <div class="mb-3">
               <div class="col-auto">
-                <label for="inputGender" class="col-form-label">Did your drink water or food? </label>
+                <label for="inputGender" class="col-form-label">What would you like to log?</label>
               </div>
               <div class="ml-4 form-check">
                 <input class="form-check-input" type="radio" value="food" v-model="waterOrFood">
@@ -138,7 +148,7 @@ async function addFood() {
     <h3 class="mt-3 h3">Meals:</h3>
     <div class="mt-1 grid grid-cols-1 xl:grid-cols-3">
       <div v-for="meal of userData.nutritionLog" class="bg-white rounded-md border-2 border-gray-200 p-4 mb-2 xl:mr-2">
-        <h5 class="h5">{{ JSON.parse(meal.foodData).food}} &bull; {{ new Date(meal.time).toLocaleDateString() }}</h5>
+        <h5 class="h5">{{ JSON.parse(meal.foodData).name}} &bull; {{ new Date(meal.time).toLocaleDateString() }}</h5>
         <div class="font-sans font-sm text-gray-500">
           <p>Calories &bull; {{ JSON.parse(meal.foodData).calories }}</p>
           <p>Protein &bull; {{ JSON.parse(meal.foodData).protein }}</p>

@@ -40,7 +40,7 @@ def register():
     if muscleType == "":
         muscleType = "everything"
 
-    prompt = f"A person wants to {buildMuscle} weight and build muscle for {muscleType}. They are {weight}lbs and are {height} inches tall. The person only wants to work out for {days} days out of the week. Respond only in one JSON response, with the response being an array of days, with each day having an array of workouts (\"workouts\"), a day number (\"day\"), and a specific body part focus (\"focus\"). Each workout in the array will have a workout name (\"name\"), a number of reps (\"reps\"), and a number of sets(\"sets\")",
+    prompt = f"A person wants to {buildMuscle} weight and build muscle for {muscleType}. They are {weight}lbs and are {height} inches tall. The person only wants to work out for {days} days out of the week. Respond only in one JSON response, with the response being an array of days, with each day having an array of workouts (\"workouts\"), a day number (\"day\"), and a specific body part focus (\"focus\"). Each workout in the array will have a workout name (\"name\"), a number of reps (\"reps\"), and a number of sets(\"sets\"). Do not include \\n or \\t in any response.",
     response = openai.Completion.create(
         model="text-davinci-003",
         prompt=prompt,
@@ -123,12 +123,12 @@ def regenerate():
     buildMuscle = doc['buildMuscle']
     muscleType = doc['muscleType']
     
-    prompt = f"A person wants to {buildMuscle} weight and build muscle for {muscleType}. They are {weight}lbs and are {height} inches tall. The person only wants to work out for {days} days out of the week. Respond only in one JSON response, with the response being an array of days, with each day having an array of workouts (\"workouts\"), a day number (\"day\"), and a specific body part focus (\"focus\"). Each workout in the array will have a workout name (\"name\"), a number of reps for one set (\"reps\"), and a number of sets (\"sets\").",
+    prompt = f"A person wants to {buildMuscle} weight and build muscle for {muscleType}. They are {weight}lbs and are {height} inches tall. The person only wants to work out for {days} days out of the week. Respond only in one JSON response, with the response being an array of days, with each day having an array of workouts (\"workouts\"), a day number (\"day\"), and a specific body part focus (\"focus\"). Each workout in the array will have a workout name (\"name\"), a number of reps for one set (\"reps\"), and a number of sets (\"sets\"). Do not include \\n or \\t in any response.",
     response = openai.Completion.create(
         model="text-davinci-003",
         prompt=prompt,
         temperature=0.5,
-        max_tokens=500,
+        max_tokens=1000,
     )
     db.collection("Accounts").document(uid).update({
         "workoutPlans": response["choices"][0]["text"]
@@ -142,11 +142,11 @@ def nutrition():
     food = request.get_json()['food']
     uid = request.get_json()['uid']
 
-    prompt = f"Tell me the macros for {food}. Respond only in one JSON response, with the response being an object of all the macros. The six main nutrients are calories , protein, carbs, fats, sodium, and sugar. Make sure there are units. The json should be formatted with the macro: value. The units for calories should be Cal. Return the food as well, keep all JSON keys lowercased and exactly how I specified them."
+    prompt = f"Tell me the macros for {food}. Respond only in one JSON response, with the response being an object of all the macros and the food name (\"name\"). The six main nutrients are calories, protein, carbs, fats, sodium, and sugar. Include these EXACTLY as typed. Include the macro values in a string with the unit. The json should be formatted with the macro: value, and one key-value for each macro. Keep all JSON keys lowercased and exactly how I specified them."
     response = openai.Completion.create(
         model="text-davinci-003",
         prompt=prompt,
-        temperature=0.8,
+        temperature=0.5,
         max_tokens=500,
     )
 
@@ -172,7 +172,6 @@ def videoSearch():
     return jsonify({'data': firstVideo}), 200
 
 def targets(uid):
-    # age, height, weight, activeness
     data = db.collection('Accounts').document(uid).get().to_dict()
     age = float(data['age'])
     height = float(data['height']) * 2.54 # height in cm
@@ -181,10 +180,12 @@ def targets(uid):
     gender = data['gender']
     protein = float(data['weight'])
 
+    # BMR Formula https://www.garnethealth.org/news/basal-metabolic-rate-calculator#:~:text=Your%20basal%20metabolism%20rate%20is,4.330%20x%20age%20in%20years)
+
     if gender == "m":
-        calories = 13.397 * weight + 4.799 * height - 5.677 * age + 88.362 # MBR Formula
+        calories = 13.397 * weight + 4.799 * height - 5.677 * age + 88.362
     else:
-        calories = 9.247 * weight + 3.098 * height - 4.330 * age + 447.593 # MBR Formula
+        calories = 9.247 * weight + 3.098 * height - 4.330 * age + 447.593
     if goal == "lose":
         calories = calories - 250
     elif goal == "gain":
@@ -194,21 +195,28 @@ def targets(uid):
     weight = float(data['weight'])
     water_log = data['waterLog']
 
-    reccommended_amount = weight / 2 # half an ounce of water for every pound u weight
+    reccommended_amount = weight / 2 # half an ounce of water for every pound u weigh
     
     water_today = 0
     for log in water_log:
         if log['date'] == datetime.datetime.now().strftime("%Y-%m-%d"):
             water_today += float(log['waterData'])
 
-    if water_today < reccommended_amount:
-        return {
-            'food': int(calories), 
-            'water': int(reccommended_amount - water_today),
-            'protein': int(protein)
-        }
-    elif water_today >= reccommended_amount:
-        return { 'food': int(calories), 'water': 0, 'protein': int(protein) }
+    waterAmt = reccommended_amount - water_today
+
+    if calories < 0:
+        calories = 0
+    if waterAmt < 0:
+        waterAmt = 0
+    if protein < 0:
+        protein = 0
+
+    resp = {
+        'food': int(calories), 
+        'water': int(waterAmt),
+        'protein': int(protein)
+    }
+    return resp
 
 @app.route('/waterLog', methods=['POST'])
 def water_log():

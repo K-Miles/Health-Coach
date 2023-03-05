@@ -23,7 +23,7 @@ import { signInWithEmailAndPassword } from '@firebase/auth';
 <template>
   <div class="container bg-gray-100 rounded-md mt-5 p-4">
       <h2 class="h2">Welcome to HealthCoach!</h2>
-      <p class="p">We need a little more info about you to create an account.</p>
+      <p class="p">You've got this! Enter the following info to login:</p>
       <div class="container">
         <form @submit.prevent="login" class="mt-2">
           <div class="mb-3 row">
