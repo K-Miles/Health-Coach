@@ -2,7 +2,6 @@ from flask import Flask, request, redirect, url_for, session, jsonify
 import firebase_admin
 from firebase_admin import credentials, auth, firestore
 from flask_cors import CORS, cross_origin
-from ast import literal_eval
 import urllib.request
 import re
 import datetime
@@ -41,7 +40,6 @@ def register():
     if muscleType == "":
         muscleType = "everything"
 
-    print("openai now")
     prompt = f"A person wants to {buildMuscle} weight and build muscle for {muscleType}. They are {weight}lbs and are {height} inches tall. The person only wants to work out for {days} days out of the week. Respond only in one JSON response, with the response being an array of days, with each day having an array of workouts (\"workouts\"), a day number (\"day\"), and a specific body part focus (\"focus\"). Each workout in the array will have a workout name (\"name\"), a number of reps (\"reps\"), and a number of sets(\"sets\")",
     response = openai.Completion.create(
         model="text-davinci-003",
@@ -50,7 +48,7 @@ def register():
         max_tokens=1000,
     )
     workoutPlan = response["choices"][0]["text"]
-    print(workoutPlan)
+    
     if email is None or password is None:
         return {'message': 'Please fill in all fields'}, 400
     try:
