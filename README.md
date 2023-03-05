@@ -16,6 +16,10 @@ To setup the backend server, go [here](/backend/README.md)
 
 #### Website
 - Vue & Nuxt.js
+- Bootstrap 5
+- OpenAI DALLE-2 for logo
 
 #### Other
 - StackOverflow
+- Bootstrap Docs
+- Other sites when attributed in comments
