@@ -4,8 +4,12 @@ from firebase_admin import credentials, auth, firestore
 from flask_cors import CORS, cross_origin
 from ast import literal_eval
 import urllib.request
-import re, datetime
+import re
+import datetime
+import os
 import openai
+
+os.chdir(os.path.dirname(os.path.abspath(__file__))) # Making sure your directory is the backend folder
 
 cred = credentials.Certificate("secrets/serviceAccount.json")
 firebase = firebase_admin.initialize_app(cred)
@@ -31,6 +35,9 @@ def register():
     buildMuscle = request.form['buildMuscle']
     muscleType = request.form['muscleType']
     age = request.form['age']
+
+    fname = fname.capitalize()
+    lname = lname.capitalize()
     if muscleType == "":
         muscleType = "everything"
 
@@ -166,15 +173,54 @@ def targets():
     gender = data['gender']
 
     if gender == "m":
-        calories = 13.397 * weight + 4.799 * height - 5.677 * age + 88.362
+        calories = 13.397 * weight + 4.799 * height - 5.677 * age + 88.362 # MBR Formula
     else:
-        calories = 9.247 * weight + 3.098 * height - 4.330 * age + 447.593
+        calories = 9.247 * weight + 3.098 * height - 4.330 * age + 447.593 # MBR Formula
     if goal == "lose":
         calories = calories - 250
     elif goal == "gain":
         calories = calories + 250
 
     return jsonify({'data': int(calories)}), 200
+
+@app.route('/waterLog', methods=['POST'])
+def water_log():
+    uid = request.get_json()['uid']
+    water = request.get_json()['water'] # in ounces please
+
+    data = {
+        "waterData": water,
+        "date": datetime.datetime.now().strftime("%Y-%m-%d"),
+        "time": datetime.datetime.now().strftime("%H:%M:%S")
+    }
+
+    db.collection("Accounts").document(uid).update({
+        "waterLog": firestore.ArrayUnion([data])
+    })
+
+    return jsonify(data), 200
+
+@app.route('/waterTargetToday', methods=['POST'])
+def waterTargetToday():
+    uid = request.get_json()['uid']
+
+    data = db.collection('Accounts').document(uid).get().to_dict()
+    weight = int(data['weight'])
+    water_log = data['waterLog']
+
+    reccommended_amount = weight / 2 # half an ounce of water for every pound u weight
+    
+    water_today = 0
+    for log in water_log:
+        if log['date'] == datetime.datetime.now().strftime("%Y-%m-%d"):
+            water_today += float(log['waterData'])
+
+    if water_today < reccommended_amount:
+        return jsonify({'data': int(reccommended_amount - water_today)}), 200
+        # return jsonify({'message': f'You need {reccommended_amount - water_today} ounces of water today.'}), 200
+    elif water_today >= reccommended_amount:
+        return jsonify({'data': 0}), 200
+        # return jsonify({'message': f'You need {water_today - reccommended_amount} more ounces of water today.'}), 200
 
 if __name__ == '__main__':
     app.run(debug=True, port=5001)
